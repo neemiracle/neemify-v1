@@ -6,6 +6,8 @@
  */
 
 import { v4 as uuidv4 } from 'uuid';
+import { randomBytes } from 'crypto';
+import { promises as dns } from 'dns';
 import { supabaseAdmin } from '../config/database';
 import { Company, DomainValidationResult, LicenseFeatures } from '../types';
 import { licensingService } from './licensing.service';
@@ -15,6 +17,13 @@ import { licensingService } from './licensing.service';
  * Manages organizations and domain-based signup validation
  */
 export class CompanyService {
+  /**
+   * Generate a unique domain verification token
+   */
+  private generateVerificationToken(): string {
+    return randomBytes(32).toString('hex');
+  }
+
   /**
    * Extract domain from email address
    *
@@ -89,6 +98,9 @@ export class CompanyService {
         expiresInDays
       );
 
+      // Generate domain verification token
+      const verificationToken = this.generateVerificationToken();
+
       // Insert company (license is already stored by licensingService)
       const { data: company, error } = await supabaseAdmin
         .from('companies')
@@ -98,6 +110,7 @@ export class CompanyService {
           domain,
           license_key: licenseKey,
           license_status: 'active',
+          domain_verification_token: verificationToken,
         })
         .select()
         .single();
@@ -248,6 +261,97 @@ export class CompanyService {
       message: 'Access request submitted. Please contact your organization admin.',
       adminEmail: admin.email,
     };
+  }
+
+  /**
+   * Verify domain ownership via DNS TXT record
+   *
+   * @param companyId - Company ID
+   */
+  async verifyDomainViaDNS(companyId: string): Promise<{
+    success: boolean;
+    verified: boolean;
+    error?: string;
+    message?: string;
+  }> {
+    try {
+      // Get company
+      const company = await this.getCompanyById(companyId);
+      if (!company) {
+        return { success: false, verified: false, error: 'Company not found' };
+      }
+
+      // If already verified, return success
+      if (company.domain_verified) {
+        return { success: true, verified: true, message: 'Domain already verified' };
+      }
+
+      // Check if verification token exists
+      if (!company.domain_verification_token) {
+        return {
+          success: false,
+          verified: false,
+          error: 'No verification token found for this company',
+        };
+      }
+
+      const expectedToken = `neemify-verification=${company.domain_verification_token}`;
+      const txtRecordName = `_neemify-verification.${company.domain}`;
+
+      try {
+        // Lookup TXT records
+        const records = await dns.resolveTxt(txtRecordName);
+
+        // Check if any record matches our verification token
+        const verified = records.some((record) => {
+          const txtValue = record.join('');
+          return txtValue === expectedToken;
+        });
+
+        if (verified) {
+          // Update company as verified
+          const { error } = await supabaseAdmin
+            .from('companies')
+            .update({
+              domain_verified: true,
+              verified_at: new Date().toISOString(),
+            })
+            .eq('id', companyId);
+
+          if (error) {
+            return { success: false, verified: false, error: error.message };
+          }
+
+          return {
+            success: true,
+            verified: true,
+            message: 'Domain verified successfully',
+          };
+        } else {
+          return {
+            success: true,
+            verified: false,
+            message: 'Verification token not found in DNS records',
+          };
+        }
+      } catch (dnsError: any) {
+        // DNS lookup failed
+        if (dnsError.code === 'ENOTFOUND' || dnsError.code === 'ENODATA') {
+          return {
+            success: true,
+            verified: false,
+            message: 'DNS TXT record not found. Please ensure the record is created and DNS has propagated.',
+          };
+        }
+        throw dnsError;
+      }
+    } catch (error) {
+      return {
+        success: false,
+        verified: false,
+        error: error instanceof Error ? error.message : 'Failed to verify domain',
+      };
+    }
   }
 
   /**

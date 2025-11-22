@@ -15,6 +15,13 @@ CREATE TABLE companies (
     domain VARCHAR(255) NOT NULL UNIQUE,
     license_key TEXT NOT NULL UNIQUE,
     license_status VARCHAR(50) NOT NULL DEFAULT 'active',
+    domain_verified BOOLEAN DEFAULT false,
+    domain_verification_token VARCHAR(255),
+    verified_at TIMESTAMP WITH TIME ZONE,
+    is_blocked BOOLEAN DEFAULT false,
+    blocked_at TIMESTAMP WITH TIME ZONE,
+    blocked_reason TEXT,
+    blocked_by_user_id UUID,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     CONSTRAINT valid_license_status CHECK (license_status IN ('active', 'expired', 'suspended', 'revoked'))

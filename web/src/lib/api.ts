@@ -57,7 +57,7 @@ class ApiClient {
     }
   }
 
-  // Auth endpoints
+  // ========== Auth endpoints ==========
   async login(email: string, password: string) {
     const response = await this.client.post('/auth/login', { email, password })
     return response.data
@@ -74,7 +74,7 @@ class ApiClient {
     return response.data
   }
 
-  // Tenant endpoints
+  // ========== Tenant endpoints ==========
   async getTenants() {
     const response = await this.client.get('/tenants')
     return response.data
@@ -109,9 +109,237 @@ class ApiClient {
     return response.data
   }
 
-  // Health check
+  // ========== Dashboard Stats ==========
+  async getDashboardStats() {
+    const response = await this.client.get('/dashboard/stats')
+    return response.data
+  }
+
+  // ========== Health check ==========
   async healthCheck() {
     const response = await this.client.get('/health')
+    return response.data
+  }
+
+  // ========== Company endpoints ==========
+  async getCompanies() {
+    const response = await this.client.get('/companies')
+    return response.data
+  }
+
+  async getCompany(id: string) {
+    const response = await this.client.get(`/companies/${id}`)
+    return response.data
+  }
+
+  async createCompany(data: {
+    name: string
+    domain: string
+    features?: any
+    expiresInDays?: number
+  }) {
+    const response = await this.client.post('/companies', data)
+    return response.data
+  }
+
+  async updateCompany(id: string, data: any) {
+    const response = await this.client.patch(`/companies/${id}`, data)
+    return response.data
+  }
+
+  async getCompanyVerificationInfo(id: string) {
+    const response = await this.client.get(`/companies/${id}/verification-info`)
+    return response.data
+  }
+
+  async verifyCompanyDomain(id: string) {
+    const response = await this.client.post(`/companies/${id}/verify-domain`)
+    return response.data
+  }
+
+  async blockCompany(id: string, reason: string) {
+    const response = await this.client.post(`/companies/${id}/block`, { reason })
+    return response.data
+  }
+
+  async unblockCompany(id: string) {
+    const response = await this.client.post(`/companies/${id}/unblock`)
+    return response.data
+  }
+
+  async deleteCompany(id: string) {
+    const response = await this.client.delete(`/companies/${id}`)
+    return response.data
+  }
+
+  async getCompanyStats(id: string) {
+    const response = await this.client.get(`/companies/${id}/stats`)
+    return response.data
+  }
+
+  async getCompanyUsers(id: string) {
+    const response = await this.client.get(`/companies/${id}/users`)
+    return response.data
+  }
+
+  // ========== User endpoints ==========
+  async getUsers(params?: { companyId?: string; tenantId?: string }) {
+    const response = await this.client.get('/users', { params })
+    return response.data
+  }
+
+  async getUser(id: string) {
+    const response = await this.client.get(`/users/${id}`)
+    return response.data
+  }
+
+  async createUser(data: {
+    email: string
+    password: string
+    fullName: string
+    tenantId?: string
+    isOrgAdmin?: boolean
+  }) {
+    const response = await this.client.post('/users', data)
+    return response.data
+  }
+
+  async updateUser(id: string, data: any) {
+    const response = await this.client.patch(`/users/${id}`, data)
+    return response.data
+  }
+
+  async deleteUser(id: string) {
+    const response = await this.client.delete(`/users/${id}`)
+    return response.data
+  }
+
+  async getUserRoles(id: string) {
+    const response = await this.client.get(`/users/${id}/roles`)
+    return response.data
+  }
+
+  async assignRole(userId: string, roleId: string) {
+    const response = await this.client.post(`/users/${userId}/roles`, { roleId })
+    return response.data
+  }
+
+  async removeRole(userId: string, roleId: string) {
+    const response = await this.client.delete(`/users/${userId}/roles/${roleId}`)
+    return response.data
+  }
+
+  // ========== License endpoints ==========
+  async getLicenses() {
+    const response = await this.client.get('/licenses')
+    return response.data
+  }
+
+  async getLicense(id: string) {
+    const response = await this.client.get(`/licenses/${id}`)
+    return response.data
+  }
+
+  async createLicense(data: {
+    companyId: string
+    companyName: string
+    features: string[]
+    expiresInDays?: number
+  }) {
+    const response = await this.client.post('/licenses', data)
+    return response.data
+  }
+
+  async revokeLicense(id: string) {
+    const response = await this.client.post(`/licenses/${id}/revoke`)
+    return response.data
+  }
+
+  async suspendLicense(id: string) {
+    const response = await this.client.post(`/licenses/${id}/suspend`)
+    return response.data
+  }
+
+  async reactivateLicense(id: string) {
+    const response = await this.client.post(`/licenses/${id}/reactivate`)
+    return response.data
+  }
+
+  async validateLicense(id: string) {
+    const response = await this.client.post(`/licenses/${id}/validate`)
+    return response.data
+  }
+
+  // ========== API Usage endpoints ==========
+  async getApiUsage(params?: {
+    startDate?: string
+    endDate?: string
+    companyId?: string
+    tenantId?: string
+    limit?: number
+  }) {
+    const response = await this.client.get('/api-usage', { params })
+    return response.data
+  }
+
+  async getApiUsageStats(params?: {
+    companyId?: string
+    tenantId?: string
+  }) {
+    const response = await this.client.get('/api-usage/stats', { params })
+    return response.data
+  }
+
+  async getApiUsageByEndpoint() {
+    const response = await this.client.get('/api-usage/by-endpoint')
+    return response.data
+  }
+
+  // ========== Audit Log endpoints ==========
+  async getAuditLogs(params?: {
+    startDate?: string
+    endDate?: string
+    companyId?: string
+    tenantId?: string
+    userId?: string
+    action?: string
+    limit?: number
+  }) {
+    const response = await this.client.get('/audit-logs', { params })
+    return response.data
+  }
+
+  async getAuditLog(id: string) {
+    const response = await this.client.get(`/audit-logs/${id}`)
+    return response.data
+  }
+
+  async getAuditLogsByUser(userId: string, limit?: number) {
+    const response = await this.client.get(`/audit-logs/by-user/${userId}`, {
+      params: { limit }
+    })
+    return response.data
+  }
+
+  async getAuditLogsByCompany(companyId: string, limit?: number) {
+    const response = await this.client.get(`/audit-logs/by-company/${companyId}`, {
+      params: { limit }
+    })
+    return response.data
+  }
+
+  async getAuditLogsByAction(action: string, limit?: number) {
+    const response = await this.client.get(`/audit-logs/by-action/${action}`, {
+      params: { limit }
+    })
+    return response.data
+  }
+
+  // ========== Dashboard endpoints ==========
+  async getRecentActivity(limit?: number) {
+    const response = await this.client.get('/dashboard/recent-activity', {
+      params: { limit }
+    })
     return response.data
   }
 }

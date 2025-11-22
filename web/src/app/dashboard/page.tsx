@@ -2,11 +2,14 @@
 
 import { useEffect, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Building2, Users, Database, Activity, TrendingUp, Shield } from 'lucide-react'
+import { Building2, Users, Database, Activity, TrendingUp, Shield, Loader2 } from 'lucide-react'
+import { api } from '@/lib/api'
+import { useToast } from '@/hooks/use-toast'
 
 interface Stats {
   totalCompanies: number
   totalTenants: number
+  activeTenants: number
   totalUsers: number
   apiCallsToday: number
   activeLicenses: number
@@ -14,27 +17,52 @@ interface Stats {
 }
 
 export default function DashboardPage() {
+  const { toast } = useToast()
   const [stats, setStats] = useState<Stats>({
     totalCompanies: 0,
     totalTenants: 0,
+    activeTenants: 0,
     totalUsers: 0,
     apiCallsToday: 0,
     activeLicenses: 0,
-    systemHealth: 'healthy',
+    systemHealth: 'checking',
   })
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // In a real app, fetch this from API
-    // For now, using mock data
-    setStats({
-      totalCompanies: 12,
-      totalTenants: 45,
-      totalUsers: 234,
-      apiCallsToday: 1543,
-      activeLicenses: 12,
-      systemHealth: 'healthy',
-    })
+    fetchDashboardData()
   }, [])
+
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true)
+
+      // Fetch real data from API
+      const [dashboardStats, healthCheck] = await Promise.all([
+        api.getDashboardStats(),
+        api.healthCheck().catch(() => ({ status: 'unknown' })),
+      ])
+
+      setStats({
+        totalCompanies: dashboardStats.totalCompanies,
+        totalTenants: dashboardStats.totalTenants,
+        activeTenants: dashboardStats.activeTenants,
+        totalUsers: dashboardStats.totalUsers,
+        apiCallsToday: dashboardStats.apiCallsToday,
+        activeLicenses: dashboardStats.activeLicenses,
+        systemHealth: healthCheck.status || 'healthy',
+      })
+    } catch (error: any) {
+      console.error('Failed to fetch dashboard data:', error)
+      toast({
+        title: 'Failed to load dashboard',
+        description: error.response?.data?.error || 'An error occurred',
+        variant: 'destructive',
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const statCards = [
     {
@@ -42,44 +70,61 @@ export default function DashboardPage() {
       value: stats.totalCompanies,
       description: 'Licensed organizations',
       icon: Building2,
-      trend: '+2 this month',
+      trend: 'Backend integration pending',
+      color: 'text-blue-500',
     },
     {
       title: 'Child Tenants',
       value: stats.totalTenants,
-      description: 'Active tenants',
+      description: 'Total tenants created',
       icon: Database,
-      trend: '+8 this month',
+      trend: `${stats.activeTenants} active`,
+      color: 'text-green-500',
     },
     {
       title: 'Total Users',
       value: stats.totalUsers,
       description: 'Across all organizations',
       icon: Users,
-      trend: '+23 this week',
+      trend: 'Backend integration pending',
+      color: 'text-purple-500',
     },
     {
       title: 'API Calls Today',
       value: stats.apiCallsToday.toLocaleString(),
       description: 'System-wide requests',
       icon: Activity,
-      trend: '+12% from yesterday',
+      trend: 'Backend integration pending',
+      color: 'text-orange-500',
     },
     {
       title: 'Active Licenses',
       value: stats.activeLicenses,
       description: 'Valid and not expired',
       icon: Shield,
-      trend: '100% active',
+      trend: 'Backend integration pending',
+      color: 'text-yellow-500',
     },
     {
       title: 'System Health',
       value: stats.systemHealth.toUpperCase(),
-      description: 'All systems operational',
+      description: 'API server status',
       icon: TrendingUp,
-      trend: '99.9% uptime',
+      trend: stats.systemHealth === 'healthy' ? '99.9% uptime' : 'Checking...',
+      color: stats.systemHealth === 'healthy' ? 'text-green-500' : 'text-gray-500',
     },
   ]
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
+          <p className="text-muted-foreground">Loading dashboard...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -99,7 +144,7 @@ export default function DashboardPage() {
               <CardTitle className="text-sm font-medium">
                 {stat.title}
               </CardTitle>
-              <stat.icon className="h-4 w-4 text-muted-foreground" />
+              <stat.icon className={`h-4 w-4 ${stat.color}`} />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stat.value}</div>
@@ -112,75 +157,35 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      {/* Recent Activity */}
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Companies</CardTitle>
-            <CardDescription>
-              Latest organizations added to the platform
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {[
-                { name: 'Acme Hospital', domain: 'acmehospital.com', date: '2 hours ago' },
-                { name: 'Med Clinic Group', domain: 'medclinic.com', date: '5 hours ago' },
-                { name: 'Health Partners', domain: 'healthpartners.com', date: '1 day ago' },
-              ].map((company) => (
-                <div key={company.domain} className="flex items-center justify-between border-b pb-2">
-                  <div>
-                    <p className="font-medium">{company.name}</p>
-                    <p className="text-sm text-muted-foreground">{company.domain}</p>
-                  </div>
-                  <p className="text-xs text-muted-foreground">{company.date}</p>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>License Status</CardTitle>
-            <CardDescription>
-              Overview of license distribution
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="h-3 w-3 rounded-full bg-green-500" />
-                  <span className="text-sm">Active</span>
-                </div>
-                <span className="font-bold">12</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="h-3 w-3 rounded-full bg-yellow-500" />
-                  <span className="text-sm">Expiring Soon</span>
-                </div>
-                <span className="font-bold">0</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="h-3 w-3 rounded-full bg-red-500" />
-                  <span className="text-sm">Expired</span>
-                </div>
-                <span className="font-bold">0</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="h-3 w-3 rounded-full bg-gray-500" />
-                  <span className="text-sm">Suspended</span>
-                </div>
-                <span className="font-bold">0</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Info Alert */}
+      <Card className="border-blue-500/50 bg-blue-500/10">
+        <CardHeader>
+          <CardTitle className="text-lg">Backend Integration Status</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2 text-sm">
+          <div className="flex items-center gap-2">
+            <div className="h-2 w-2 rounded-full bg-green-500" />
+            <span><strong>Tenants API:</strong> Fully integrated and working</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="h-2 w-2 rounded-full bg-green-500" />
+            <span><strong>Health Check:</strong> Working</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="h-2 w-2 rounded-full bg-yellow-500" />
+            <span><strong>Companies, Users, Licenses, API Usage, Audit Logs:</strong> Requires backend route implementation</span>
+          </div>
+          <p className="mt-4 text-muted-foreground">
+            To enable full functionality, implement these routes in the backend API:
+            <br />• GET /api/companies
+            <br />• GET /api/users
+            <br />• GET /api/licenses
+            <br />• GET /api/api-usage
+            <br />• GET /api/audit-logs
+            <br />• GET /api/dashboard/stats (aggregated statistics)
+          </p>
+        </CardContent>
+      </Card>
 
       {/* System Status */}
       <Card>
@@ -193,10 +198,12 @@ export default function DashboardPage() {
         <CardContent>
           <div className="grid md:grid-cols-3 gap-4">
             <div className="flex items-center gap-3">
-              <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+              <div className={`h-2 w-2 rounded-full ${stats.systemHealth === 'healthy' ? 'bg-green-500 animate-pulse' : 'bg-gray-500'}`} />
               <div>
                 <p className="text-sm font-medium">API Server</p>
-                <p className="text-xs text-muted-foreground">Operational</p>
+                <p className="text-xs text-muted-foreground">
+                  {stats.systemHealth === 'healthy' ? 'Operational' : 'Unknown'}
+                </p>
               </div>
             </div>
             <div className="flex items-center gap-3">

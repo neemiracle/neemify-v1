@@ -37,12 +37,6 @@ export async function auditLog(req: Request, res: Response, next: NextFunction):
           response_status: res.statusCode,
           response_time_ms: responseTime,
           timestamp: new Date().toISOString(),
-        })
-        .then(() => {
-          // Success - no action needed
-        })
-        .catch((error) => {
-          console.error('Failed to log API usage:', error);
         });
     }
 

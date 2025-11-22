@@ -51,6 +51,13 @@ export interface Company {
   domain: string;
   license_key: string;
   license_status: LicenseStatus;
+  domain_verified?: boolean;
+  domain_verification_token?: string;
+  verified_at?: Date;
+  is_blocked?: boolean;
+  blocked_at?: Date;
+  blocked_reason?: string;
+  blocked_by_user_id?: string;
   created_at: Date;
   updated_at: Date;
 }

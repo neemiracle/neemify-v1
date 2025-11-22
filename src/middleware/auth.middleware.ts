@@ -73,14 +73,17 @@ export async function authenticate(
       return;
     }
 
-    // Validate license
-    const licenseValidation = await licensingService.validateLicense(company.license_key);
-    if (!licenseValidation.valid) {
-      res.status(403).json({
-        error: 'Invalid or expired license',
-        reason: licenseValidation.reason,
-      });
-      return;
+    // Validate license (skip for super users)
+    let licenseValidation;
+    if (!user.is_super_user) {
+      licenseValidation = await licensingService.validateLicense(company.license_key);
+      if (!licenseValidation.valid) {
+        res.status(403).json({
+          error: 'Invalid or expired license',
+          reason: licenseValidation.reason,
+        });
+        return;
+      }
     }
 
     // Get tenant if applicable
@@ -103,7 +106,7 @@ export async function authenticate(
       user: user as User,
       company: company as Company,
       tenant,
-      license: licenseValidation.license!,
+      license: licenseValidation?.license || null,
       permissions: permissionSet,
     };
 

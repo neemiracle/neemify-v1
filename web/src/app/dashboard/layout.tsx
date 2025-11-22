@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Sidebar } from '@/components/dashboard/sidebar'
 import { Header } from '@/components/dashboard/header'
@@ -13,12 +13,22 @@ export default function DashboardLayout({
 }) {
   const router = useRouter()
   const { isAuthenticated, user } = useAuthStore()
+  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    if (mounted && !isAuthenticated) {
       router.push('/login')
     }
-  }, [isAuthenticated, router])
+  }, [isAuthenticated, router, mounted])
+
+  // Prevent hydration mismatch
+  if (!mounted) {
+    return null
+  }
 
   if (!isAuthenticated) {
     return null

@@ -169,8 +169,8 @@ export class AuthService {
       };
 
       const token = jwt.sign(payload, config.jwt.secret, {
-        expiresIn: config.jwt.expiresIn,
-      });
+        expiresIn: config.jwt.expiresIn as string,
+      } as any);
 
       // Update last login
       await supabaseAdmin
